@@ -229,6 +229,8 @@ def get_previous_reports_for_branch(branch: str, ci_job_prefix: str = "") -> Lis
                 if len(summary) > 1:
                     logger.warning(f'WARNING: Multiple summary objects found for {commit}/{job_name}')
                 reports.extend(summary)
+                print('cats logging get_previous_reports_for_branch')
+                print(f'job name: {job_name} \nsummary: {summary}')
         commit_index += 1
     return reports
 
