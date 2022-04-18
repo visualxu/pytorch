@@ -202,7 +202,12 @@ def get_test_stats_summaries_for_pr(*, pr: str, job_prefix: str) -> Dict[str, Li
     summaries = bucket.objects.filter(Prefix=f"pr_test_time/{pr}/")
     return _parse_pr_summaries(summaries, job_prefix=job_prefix)
 
-
+def cats_logging_helper(summary):
+    d = []
+    for i in summary:
+        for j, val in i['files'].items():
+            d.append({j: val['total_seconds']})
+    return d
 # This function returns a list of S3 test time reports. This function can run into errors if HAVE_BOTO3 = False
 # or the S3 bucket is somehow unavailable. Even though this function goes through ten commits' reports to find a
 # non-empty report, it is still conceivable (though highly unlikely) for this function to return no reports.

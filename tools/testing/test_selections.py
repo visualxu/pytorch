@@ -5,6 +5,7 @@ import subprocess
 
 from tools.stats.s3_stat_parser import (
     _get_stripped_CI_job,
+    cats_logging_helper,
     get_previous_reports_for_branch,
     get_previous_reports_for_pr,
     Report, Version2Report,
@@ -35,13 +36,13 @@ def _calculate_job_times(reports: List["Report"]) -> Dict[str, float]:
     """Compute test runtime by filename: ("test_file_name" -> (current_avg, # values))
     """
     jobs_to_times: Dict[str, Tuple[float, int]] = dict()
+    print("cats logging _calculate_job_times")
+    print(cats_logging_helper(reports))
     for report in reports:
         v_report = cast(Version2Report, report)
         assert 'format_version' in v_report.keys() and v_report.get('format_version') == 2, \
             "S3 format currently handled is version 2 only"
         files: Dict[str, Any] = v_report['files']
-        print("cats logging _calculate_job_times")
-        print(report)
         for name, test_file in files.items():
             if name not in jobs_to_times:
                 jobs_to_times[name] = (test_file['total_seconds'], 1)
@@ -73,8 +74,8 @@ def calculate_shards(num_shards: int, tests: List[str], job_times: Dict[str, flo
         curr_shard_jobs.append(job)
         sharded_jobs[min_shard_index] = (curr_shard_time + filtered_job_times[job], curr_shard_jobs)
     print("cats logging")
-    print(job_times)
-    print(sorted_jobs)
+    print(f"job times\n{job_times}")
+    print(f"sorted_jobs\n{sorted_jobs}")
     for i, (time, jobs) in enumerate(sharded_jobs):
         print(f'{i} {time} {jobs}')
 
@@ -84,7 +85,7 @@ def calculate_shards(num_shards: int, tests: List[str], job_times: Dict[str, flo
     for job in unknown_jobs:
         sharded_jobs[index][1].append(job)
         index = (index + 1) % num_shards
-    print(unknown_jobs)
+    print(f"unknown_jobs \n{unknown_jobs}")
     for i, (time, jobs) in enumerate(sharded_jobs):
         print(f'{i} {jobs}')
     return sharded_jobs
