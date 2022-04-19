@@ -8,6 +8,8 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple, Union, Any, cast
 from typing_extensions import Literal, TypedDict
 
+from charset_normalizer import CharsetNormalizerMatches
+
 try:
     import boto3  # type: ignore[import]
     import botocore  # type: ignore[import]
@@ -231,13 +233,14 @@ def get_previous_reports_for_branch(branch: str, ci_job_prefix: str = "") -> Lis
 
     reports: List[Report] = []
     commit_index = 0
+    print(f"cats logging get_previous_reports_for_branch commits {commits}")
     while len(reports) == 0 and commit_index < len(commits):
         commit = commits[commit_index]
-        logger.warning(f'Grabbing reports from commit: {commit}')
+        print(f'Grabbing reports from commit: {commit}')
         summaries = get_test_stats_summaries_for_job(sha=commit, job_prefix=ci_job_prefix)
         for job_name, summary in summaries.items():
             if len(summary) > 1:
-                logger.warning(f'WARNING: Multiple summary objects found for {commit}/{job_name}')
+                print(f'WARNING: Multiple summary objects found for {commit}/{job_name}')
             reports.append(summary[0])
             print('cats logging get_previous_reports_for_branch')
             print(f'job name: {job_name} \nsummary: {cats_logging_helper(summary)}')
