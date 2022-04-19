@@ -170,6 +170,7 @@ def _parse_master_summaries(summaries: Any, jobs: List[str]) -> Dict[str, List[R
             summary_dict[summary_job].append(json.loads(string))
     return summary_dict
 
+
 def _parse_pr_summaries(summaries: Any, job_prefix: str) -> Dict[str, List[Tuple[Report, str]]]:
     summary_dict = defaultdict(list)
     for summary in summaries:
@@ -195,12 +196,15 @@ def get_test_stats_summaries(*, sha: str, jobs: Optional[List[str]] = None) -> D
 def get_test_stats_summaries_for_job(*, sha: str, job_prefix: str) -> Dict[str, List[Report]]:
     bucket = get_S3_bucket_readonly(OSSCI_METRICS_BUCKET)
     summaries = bucket.objects.filter(Prefix=f"test_time/{sha}/{job_prefix}")
+    print(f'cats logging get_test_stats_summaries_for_job {summaries}')
     return _parse_master_summaries(summaries, jobs=list())
+
 
 def get_test_stats_summaries_for_pr(*, pr: str, job_prefix: str) -> Dict[str, List[Tuple[Report, str]]]:
     bucket = get_S3_bucket_readonly(OSSCI_METRICS_BUCKET)
     summaries = bucket.objects.filter(Prefix=f"pr_test_time/{pr}/")
     return _parse_pr_summaries(summaries, job_prefix=job_prefix)
+
 
 def cats_logging_helper(summary):
     d = []
@@ -211,6 +215,8 @@ def cats_logging_helper(summary):
 # This function returns a list of S3 test time reports. This function can run into errors if HAVE_BOTO3 = False
 # or the S3 bucket is somehow unavailable. Even though this function goes through ten commits' reports to find a
 # non-empty report, it is still conceivable (though highly unlikely) for this function to return no reports.
+
+
 def get_previous_reports_for_branch(branch: str, ci_job_prefix: str = "") -> List[Report]:
     commit_date_ts = subprocess.check_output(
         ['git', 'show', '-s', '--format=%ct', 'HEAD'],
@@ -230,12 +236,11 @@ def get_previous_reports_for_branch(branch: str, ci_job_prefix: str = "") -> Lis
         logger.warning(f'Grabbing reports from commit: {commit}')
         summaries = get_test_stats_summaries_for_job(sha=commit, job_prefix=ci_job_prefix)
         for job_name, summary in summaries.items():
-            if job_name[:len(job_name) - len('-test')] == _get_stripped_CI_job():
-                if len(summary) > 1:
-                    logger.warning(f'WARNING: Multiple summary objects found for {commit}/{job_name}')
-                reports.extend(summary)
-                print('cats logging get_previous_reports_for_branch')
-                print(f'job name: {job_name} \nsummary: {cats_logging_helper(summary)}')
+            if len(summary) > 1:
+                logger.warning(f'WARNING: Multiple summary objects found for {commit}/{job_name}')
+            reports.append(summary[0])
+            print('cats logging get_previous_reports_for_branch')
+            print(f'job name: {job_name} \nsummary: {cats_logging_helper(summary)}')
         commit_index += 1
     return reports
 

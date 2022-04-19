@@ -18,6 +18,7 @@ from tools.stats.import_test_stats import (
 from typing import Any, Dict, List, Optional, Tuple, cast
 from typing_extensions import TypedDict
 
+
 class JobTimeJSON(TypedDict):
     commit: str
     JOB_BASE_NAME: str
@@ -57,7 +58,7 @@ def _calculate_job_times(reports: List["Report"]) -> Dict[str, float]:
 
 def calculate_shards(num_shards: int, tests: List[str], job_times: Dict[str, float]) -> List[Tuple[float, List[str]]]:
     filtered_job_times: Dict[str, float] = dict()
-    unknown_jobs : List[str] = []
+    unknown_jobs: List[str] = []
     for test in tests:
         if test in job_times:
             filtered_job_times[test] = job_times[test]
@@ -79,7 +80,6 @@ def calculate_shards(num_shards: int, tests: List[str], job_times: Dict[str, flo
     for i, (time, jobs) in enumerate(sharded_jobs):
         print(f'{i} {time} {jobs}')
 
-
     # Round robin the unknown jobs starting with the smallest shard
     index = sorted(range(num_shards), key=lambda i: sharded_jobs[i][0])[0]
     for job in unknown_jobs:
@@ -93,7 +93,9 @@ def calculate_shards(num_shards: int, tests: List[str], job_times: Dict[str, flo
 
 def _pull_job_times_from_S3() -> Dict[str, float]:
     if HAVE_BOTO3:
+        print(f"cats logging _pull_job_times_from_S3 {_get_stripped_CI_job()}")
         ci_job_prefix = _get_stripped_CI_job()
+        print(f"cats logging {ci_job_prefix}")
         s3_reports: List["Report"] = get_previous_reports_for_branch('origin/viable/strict', ci_job_prefix)
     else:
         print('Uh oh, boto3 is not found. Either it is not installed or we failed to import s3_stat_parser.')
@@ -125,7 +127,8 @@ def _query_past_job_times(test_times_file: Optional[str] = None) -> Dict[str, fl
         elif curr_ci_job != file_ci_job:
             print(f'Current test times file is for different CI job {file_ci_job}.')
         else:
-            print(f'Found stats for current commit: {curr_commit} and job: {curr_ci_job}. Proceeding with those values.')
+            print(
+                f'Found stats for current commit: {curr_commit} and job: {curr_ci_job}. Proceeding with those values.')
             return test_times_json.get('job_times', {})
 
         # Found file, but commit or CI job in JSON doesn't match
@@ -176,7 +179,7 @@ def get_shard_based_on_S3(which_shard: int, num_shards: int, tests: List[str], t
     # Got no stats from S3, returning early to save runtime
     if len(jobs_to_times) == 0:
         print('Gathered no stats from S3. Proceeding with default sharding plan.')
-        return tests[which_shard - 1 :: num_shards]
+        return tests[which_shard - 1:: num_shards]
 
     shards = calculate_shards(num_shards, tests, jobs_to_times)
     _, tests_from_shard = shards[which_shard - 1]
