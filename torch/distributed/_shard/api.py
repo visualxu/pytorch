@@ -7,6 +7,7 @@ from torch.distributed._shard.sharded_tensor import (
     ShardedTensor,
     _PartialTensor
 )
+from .replicated_tensor import ReplicatedTensor
 from .sharding_spec import (
     ShardingSpec,
     ChunkShardingSpec
@@ -14,7 +15,7 @@ from .sharding_spec import (
 from .sharding_plan import (
     ShardingPlan
 )
-from .replicated_tensor import ReplicatedTensor
+from .sharder import Sharder
 
 def _shard_tensor(
     tensor: torch.Tensor, sharding_spec: ShardingSpec, src_rank=0, process_group=None
@@ -265,12 +266,21 @@ def shard_module(
             shard_parameter(
                 mod,
                 param_name,
-                plan.plan[name],
+                spec,
                 src_rank=src_rank,
                 process_group=process_group
             )
+        elif isinstance(spec, Sharder):
+            parent_mod_path, _, mod_name = name.rpartition(".")
+            if name == "":
+                raise KeyError("Module path must not be empty for custom sharder!")
+            mod = module.get_submodule(name)
+            parent_mod = module.get_submodule(parent_mod_path)
+            sharded_mod = spec.shard(mod)
+            # swap this submodule with the sharded module
+            parent_mod.mod_name = sharded_mod
         else:
-            raise TypeError(f"Only `ShardingSpec` is supported to shard '{name}'")
+            raise TypeError(f"Only `ShardingSpec` and `Sharder` are supported to shard '{name}'")
 
     # reshard output if there's an entry in `reshard_output` for this module
     if plan.output_plan is not None:
